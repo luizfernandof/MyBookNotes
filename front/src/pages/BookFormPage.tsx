@@ -1,3 +1,4 @@
+import ImageSearchOutlined from '@mui/icons-material/ImageSearchOutlined'
 import Alert from '@mui/material/Alert'
 import Button from '@mui/material/Button'
 import Card from '@mui/material/Card'
@@ -14,7 +15,10 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { Link as RouterLink, useNavigate, useParams } from 'react-router'
 import { createBook, getBook, updateBook } from '../api/books'
 import { ApiError } from '../api/client'
+import type { CoverCandidate } from '../api/covers'
 import { READING_STATUS_LABELS, READING_STATUSES, type Book } from '../api/types'
+import { BookCover } from '../components/books/BookCover'
+import { CoverSearchDialog } from '../components/books/CoverSearchDialog'
 import { EmptyState } from '../components/feedback/EmptyState'
 import { LoadingState } from '../components/feedback/LoadingState'
 import { useValidatedForm } from '../hooks/useValidatedForm'
@@ -53,6 +57,7 @@ export function BookFormPage() {
   const [loading, setLoading] = useState(isEdit)
   const [notFound, setNotFound] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const [coverSearchOpen, setCoverSearchOpen] = useState(false)
 
   useEffect(() => {
     if (!id) return
@@ -86,6 +91,17 @@ export function BookFormPage() {
     } finally {
       setSubmitting(false)
     }
+  }
+
+  // Usa a capa escolhida e aproveita título/autor da fonte só se ainda estiverem vazios
+  function handleCoverSelected(candidate: CoverCandidate) {
+    const { title, author } = form.values
+    form.setFields({
+      coverUrl: candidate.coverUrl,
+      ...(title.trim() === '' && { title: candidate.title.slice(0, LIMITS.textMax) }),
+      ...(author.trim() === '' && candidate.author && { author: candidate.author.slice(0, LIMITS.textMax) }),
+    })
+    setCoverSearchOpen(false)
   }
 
   if (loading) return <LoadingState />
@@ -138,8 +154,17 @@ export function BookFormPage() {
             </FormHelperText>
           </FormControl>
 
-          <TextField label="URL da capa" type="url" placeholder="https://…"
-            slotProps={{ htmlInput: { maxLength: LIMITS.textMax } }} {...form.bind('coverUrl')} />
+          <Stack direction="row" spacing={2} sx={{ alignItems: 'flex-start' }}>
+            <BookCover title={form.values.title} coverUrl={form.values.coverUrl.trim() || null} />
+            <Stack spacing={1.5} sx={{ flex: 1, minWidth: 0 }}>
+              <TextField label="URL da capa" type="url" placeholder="https://…"
+                slotProps={{ htmlInput: { maxLength: LIMITS.textMax } }} {...form.bind('coverUrl')} />
+              <Button variant="outlined" startIcon={<ImageSearchOutlined />} onClick={() => setCoverSearchOpen(true)}
+                sx={{ alignSelf: 'flex-start' }}>
+                Buscar capa
+              </Button>
+            </Stack>
+          </Stack>
           <TextField label="Resumo / anotações" multiline minRows={5} {...form.bind('summary')} />
 
           <Stack direction="row" spacing={1} sx={{ justifyContent: 'flex-end' }}>
@@ -148,6 +173,13 @@ export function BookFormPage() {
           </Stack>
         </Stack>
       </CardContent>
+
+      <CoverSearchDialog
+        open={coverSearchOpen}
+        initialQuery={{ title: form.values.title, author: form.values.author }}
+        onSelect={handleCoverSelected}
+        onClose={() => setCoverSearchOpen(false)}
+      />
     </Card>
   )
 }

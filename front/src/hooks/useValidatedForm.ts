@@ -8,10 +8,14 @@ export function useValidatedForm<T extends object>(initial: T, validate: (values
   const [errors, setErrors] = useState<FieldErrors<T>>({})
   const [submitted, setSubmitted] = useState(false)
 
-  function setField<K extends keyof T>(field: K, value: T[K]) {
-    const next = { ...values, [field]: value }
+  function setFields(changes: Partial<T>) {
+    const next = { ...values, ...changes }
     setValues(next)
     if (submitted) setErrors(validate(next))
+  }
+
+  function setField<K extends keyof T>(field: K, value: T[K]) {
+    setFields({ [field]: value } as unknown as Partial<T>)
   }
 
   function validateAll() {
@@ -40,5 +44,5 @@ export function useValidatedForm<T extends object>(initial: T, validate: (values
     }
   }
 
-  return { values, setValues, errors, setField, validateAll, setServerErrors, bind }
+  return { values, setValues, errors, setField, setFields, validateAll, setServerErrors, bind }
 }
