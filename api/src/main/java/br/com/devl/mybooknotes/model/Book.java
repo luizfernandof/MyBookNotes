@@ -48,16 +48,6 @@ public class Book {
 
     public Book() {}
 
-    public Book(String title, String author, Integer rate, String summary, LocalDate finishedAt, String coverUrl, ReadingStatus status) {
-        this.title = title;
-        this.author = author;
-        this.rate = rate;
-        this.summary = summary;
-        this.finishedAt = finishedAt;
-        this.coverUrl = coverUrl;
-        this.status = status;
-    }
-
     public UUID getId() {
         return id;
     }

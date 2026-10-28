@@ -1,14 +1,18 @@
 package br.com.devl.mybooknotes.controller;
 
-import java.util.List;
 import java.util.UUID;
 
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
+import org.springframework.data.web.PagedModel;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -16,7 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
 import br.com.devl.mybooknotes.dto.BookRequestDTO;
 import br.com.devl.mybooknotes.dto.BookResponseDTO;
 import br.com.devl.mybooknotes.service.BookService;
-import org.springframework.web.bind.annotation.PutMapping;
+import jakarta.validation.Valid;
 
 
 @RestController
@@ -30,9 +34,10 @@ public class BookController {
     }
 
     @GetMapping()
-    public ResponseEntity<List<BookResponseDTO>> listBooks() {
-        var books = service.listBooks();
-        return ResponseEntity.ok(books);
+    public ResponseEntity<PagedModel<BookResponseDTO>> listBooks(
+            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        var books = service.listBooks(pageable);
+        return ResponseEntity.ok(new PagedModel<>(books));
     }
 
     @GetMapping("/{id}")
@@ -40,16 +45,16 @@ public class BookController {
         var book = service.findBookById(id);
         return ResponseEntity.ok(book);
     }
-    
+
 
     @PostMapping()
-    public ResponseEntity<BookResponseDTO> createBook(@RequestBody BookRequestDTO bookRequest) {
+    public ResponseEntity<BookResponseDTO> createBook(@Valid @RequestBody BookRequestDTO bookRequest) {
         var result = service.createBook(bookRequest);
         return ResponseEntity.status(HttpStatus.CREATED).body(result);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<BookResponseDTO> updateBook(@PathVariable UUID id, @RequestBody BookRequestDTO request) {
+    public ResponseEntity<BookResponseDTO> updateBook(@PathVariable UUID id, @Valid @RequestBody BookRequestDTO request) {
         var updatedBook = service.updateBook(id, request);
         return ResponseEntity.ok(updatedBook);
     }
