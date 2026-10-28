@@ -10,41 +10,49 @@ import br.com.devl.mybooknotes.dto.BookRequestDTO;
 import br.com.devl.mybooknotes.dto.BookResponseDTO;
 import br.com.devl.mybooknotes.model.Book;
 import br.com.devl.mybooknotes.repository.BookRepository;
+import br.com.devl.mybooknotes.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
 
+// Toda operação é filtrada pelo dono: o livro de outro usuário é tratado como inexistente (404)
 @Service
 public class BookService {
 
     private final BookRepository repository;
-    public BookService(BookRepository repository) { this.repository = repository; }
+    private final UserRepository userRepository;
 
-    public BookResponseDTO findBookById(UUID id) {
-        return BookResponseDTO.fromEntity(findOrThrow(id));
+    public BookService(BookRepository repository, UserRepository userRepository) {
+        this.repository = repository;
+        this.userRepository = userRepository;
     }
 
-    public Page<BookResponseDTO> listBooks(Pageable pageable) {
-        return repository.findAll(pageable).map(BookResponseDTO::fromEntity);
+    public BookResponseDTO findBookById(UUID userId, UUID id) {
+        return BookResponseDTO.fromEntity(findOrThrow(userId, id));
     }
 
-    public BookResponseDTO createBook(BookRequestDTO request) {
+    public Page<BookResponseDTO> listBooks(UUID userId, Pageable pageable) {
+        return repository.findAllByOwnerId(userId, pageable).map(BookResponseDTO::fromEntity);
+    }
+
+    public BookResponseDTO createBook(UUID userId, BookRequestDTO request) {
         var book = request.toEntity();
+        book.setOwner(userRepository.getReferenceById(userId));
         var savedBook = repository.save(book);
         return BookResponseDTO.fromEntity(savedBook);
     }
 
-    public BookResponseDTO updateBook(UUID id, BookRequestDTO request) {
-        var book = findOrThrow(id);
+    public BookResponseDTO updateBook(UUID userId, UUID id, BookRequestDTO request) {
+        var book = findOrThrow(userId, id);
         request.updateEntity(book);
         var savedBook = repository.save(book);
         return BookResponseDTO.fromEntity(savedBook);
     }
 
-    public void deleteBookById(UUID id) {
-        repository.delete(findOrThrow(id));
+    public void deleteBookById(UUID userId, UUID id) {
+        repository.delete(findOrThrow(userId, id));
     }
 
-    private Book findOrThrow(UUID id) {
-        return repository.findById(id)
+    private Book findOrThrow(UUID userId, UUID id) {
+        return repository.findByIdAndOwnerId(id, userId)
             .orElseThrow(() -> new EntityNotFoundException("Livro não encontrado!..."));
     }
 

@@ -8,6 +8,8 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.data.web.PagedModel;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -34,35 +36,42 @@ public class BookController {
     }
 
     @GetMapping()
-    public ResponseEntity<PagedModel<BookResponseDTO>> listBooks(
+    public ResponseEntity<PagedModel<BookResponseDTO>> listBooks(@AuthenticationPrincipal Jwt jwt,
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
-        var books = service.listBooks(pageable);
+        var books = service.listBooks(userId(jwt), pageable);
         return ResponseEntity.ok(new PagedModel<>(books));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<BookResponseDTO> findBookById(@PathVariable UUID id) {
-        var book = service.findBookById(id);
+    public ResponseEntity<BookResponseDTO> findBookById(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id) {
+        var book = service.findBookById(userId(jwt), id);
         return ResponseEntity.ok(book);
     }
 
 
     @PostMapping()
-    public ResponseEntity<BookResponseDTO> createBook(@Valid @RequestBody BookRequestDTO bookRequest) {
-        var result = service.createBook(bookRequest);
+    public ResponseEntity<BookResponseDTO> createBook(@AuthenticationPrincipal Jwt jwt,
+            @Valid @RequestBody BookRequestDTO bookRequest) {
+        var result = service.createBook(userId(jwt), bookRequest);
         return ResponseEntity.status(HttpStatus.CREATED).body(result);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<BookResponseDTO> updateBook(@PathVariable UUID id, @Valid @RequestBody BookRequestDTO request) {
-        var updatedBook = service.updateBook(id, request);
+    public ResponseEntity<BookResponseDTO> updateBook(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id,
+            @Valid @RequestBody BookRequestDTO request) {
+        var updatedBook = service.updateBook(userId(jwt), id, request);
         return ResponseEntity.ok(updatedBook);
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteBookById(@PathVariable UUID id) {
-        service.deleteBookById(id);
+    public ResponseEntity<Void> deleteBookById(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id) {
+        service.deleteBookById(userId(jwt), id);
         return ResponseEntity.noContent().build();
+    }
+
+    // O dono vem sempre do token (claim "sub"), nunca do corpo da requisição
+    private static UUID userId(Jwt jwt) {
+        return UUID.fromString(jwt.getSubject());
     }
 
 }
