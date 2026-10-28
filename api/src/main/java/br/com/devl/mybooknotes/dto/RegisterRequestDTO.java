@@ -6,7 +6,7 @@ import jakarta.validation.constraints.Size;
 
 // O BCrypt ignora tudo depois de 72 bytes, por isso o limite máximo
 public record RegisterRequestDTO(
-        @NotBlank @Email String email,
+        @NotBlank @Email @Size(max = 255) String email,
         @NotBlank @Size(min = 8, max = 72) String password)
 {
 }
