@@ -1,6 +1,27 @@
 # MyBookNotes — front
 
-React + Vite + TypeScript para a API em `../api`.
+React + Vite + TypeScript + [MUI](https://mui.com) para a API em `../api`.
+
+## Estrutura
+
+```
+src/
+  api/          chamadas à API, tipos e cliente HTTP com refresh automático
+  auth/         contexto de autenticação
+  theme/        tema MUI (identidade visual, claro/escuro) e botão de troca de tema
+  hooks/        useValidatedForm: estado + validação dos formulários
+  components/
+    layout/     AppBar, moldura das telas de login/cadastro, marca
+    books/      card, capa e chip de status do livro
+    feedback/   carregando, estado vazio, diálogo de confirmação
+  pages/        uma página por rota
+  validation.ts regras de validação (espelho dos DTOs da API)
+```
+
+## Tema
+
+As cores ficam em `src/theme/theme.ts`, em versões clara e escura. O botão de tema (na barra superior e nas telas
+de login/cadastro) alterna entre Claro, Escuro e Sistema; a escolha fica salva no navegador.
 
 ## Rodando
 

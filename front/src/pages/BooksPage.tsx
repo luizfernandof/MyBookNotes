@@ -1,31 +1,29 @@
+import Add from '@mui/icons-material/Add'
+import Alert from '@mui/material/Alert'
+import Box from '@mui/material/Box'
+import Button from '@mui/material/Button'
+import Pagination from '@mui/material/Pagination'
+import Stack from '@mui/material/Stack'
+import Typography from '@mui/material/Typography'
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router'
+import { Link as RouterLink } from 'react-router'
 import { deleteBook, listBooks } from '../api/books'
 import { ApiError } from '../api/client'
-import { READING_STATUS_LABELS, type Book, type Page } from '../api/types'
-import { LIMITS } from '../validation'
+import type { Book, Page } from '../api/types'
+import { BookCard } from '../components/books/BookCard'
+import { ConfirmDialog } from '../components/feedback/ConfirmDialog'
+import { EmptyState } from '../components/feedback/EmptyState'
+import { LoadingState } from '../components/feedback/LoadingState'
 
 const PAGE_SIZE = 12
-
-function formatDate(isoDate: string) {
-  const [year, month, day] = isoDate.split('-')
-  return `${day}/${month}/${year}`
-}
-
-function Stars({ rate }: { rate: number }) {
-  return (
-    <span className="stars" aria-label={`Nota ${rate} de ${LIMITS.rateMax}`}>
-      {'★'.repeat(rate)}
-      <span className="stars-empty">{'★'.repeat(LIMITS.rateMax - rate)}</span>
-    </span>
-  )
-}
 
 export function BooksPage() {
   const [page, setPage] = useState(0)
   const [reloadKey, setReloadKey] = useState(0)
   const [data, setData] = useState<Page<Book> | null>(null)
   const [error, setError] = useState('')
+  const [bookToDelete, setBookToDelete] = useState<Book | null>(null)
+  const [deleting, setDeleting] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -48,77 +46,81 @@ export function BooksPage() {
     }
   }, [page, reloadKey])
 
-  async function handleDelete(book: Book) {
-    if (!confirm(`Apagar "${book.title}"?`)) return
+  async function confirmDelete() {
+    if (!bookToDelete) return
+    setDeleting(true)
     try {
-      await deleteBook(book.id)
+      await deleteBook(bookToDelete.id)
       setReloadKey((key) => key + 1)
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'Não foi possível apagar o livro')
+    } finally {
+      setDeleting(false)
+      setBookToDelete(null)
     }
   }
 
+  const newBookButton = (
+    <Button variant="contained" startIcon={<Add />} component={RouterLink} to="/books/new">
+      Novo livro
+    </Button>
+  )
+
   return (
     <>
-      <div className="page-header">
-        <h1>Meus livros</h1>
-        <Link to="/books/new" className="button primary">Novo livro</Link>
-      </div>
+      <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'center', mb: 3, gap: 2 }}>
+        <Typography variant="h1">Meus livros</Typography>
+        {newBookButton}
+      </Stack>
 
-      {error && <p className="notice error" role="alert">{error}</p>}
-      {!data && !error && <p className="muted">Carregando…</p>}
+      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+      {!data && !error && <LoadingState />}
 
       {data && data.content.length === 0 && (
-        <div className="card empty">
-          <p>Você ainda não cadastrou nenhum livro.</p>
-          <Link to="/books/new" className="button primary">Cadastrar o primeiro</Link>
-        </div>
+        <EmptyState message="Você ainda não cadastrou nenhum livro." action={newBookButton} />
       )}
 
       {data && data.content.length > 0 && (
         <>
-          <ul className="book-grid">
+          <Box
+            component="ul"
+            sx={{
+              listStyle: 'none',
+              p: 0,
+              m: 0,
+              display: 'grid',
+              gap: 2,
+              gridTemplateColumns: { xs: '1fr', sm: 'repeat(auto-fill, minmax(340px, 1fr))' },
+            }}
+          >
             {data.content.map((book) => (
-              <li key={book.id} className="card book-card">
-                {book.coverUrl ? (
-                  <img className="cover" src={book.coverUrl} alt="" loading="lazy" />
-                ) : (
-                  <div className="cover cover-placeholder" aria-hidden="true">{book.title.charAt(0)}</div>
-                )}
-                <div className="book-info">
-                  <span className={`badge status-${book.status.toLowerCase()}`}>
-                    {READING_STATUS_LABELS[book.status]}
-                  </span>
-                  <h2>{book.title}</h2>
-                  <p className="muted">{book.author}</p>
-                  {book.rate !== null && <Stars rate={book.rate} />}
-                  {book.finishedAt && <p className="muted small">Terminado em {formatDate(book.finishedAt)}</p>}
-                  {book.summary && <p className="summary">{book.summary}</p>}
-                  <div className="actions">
-                    <Link to={`/books/${book.id}/edit`} className="button ghost">Editar</Link>
-                    <button type="button" className="button ghost danger" onClick={() => handleDelete(book)}>
-                      Apagar
-                    </button>
-                  </div>
-                </div>
+              <li key={book.id}>
+                <BookCard book={book} onDelete={setBookToDelete} />
               </li>
             ))}
-          </ul>
+          </Box>
 
           {data.page.totalPages > 1 && (
-            <nav className="pagination" aria-label="Paginação">
-              <button type="button" className="button ghost" disabled={page === 0} onClick={() => setPage(page - 1)}>
-                Anterior
-              </button>
-              <span className="muted">Página {page + 1} de {data.page.totalPages}</span>
-              <button type="button" className="button ghost" disabled={page + 1 >= data.page.totalPages}
-                onClick={() => setPage(page + 1)}>
-                Próxima
-              </button>
-            </nav>
+            <Pagination
+              count={data.page.totalPages}
+              page={page + 1}
+              onChange={(_, value) => setPage(value - 1)}
+              color="primary"
+              sx={{ mt: 3, display: 'flex', justifyContent: 'center' }}
+            />
           )}
         </>
       )}
+
+      <ConfirmDialog
+        open={bookToDelete !== null}
+        title="Apagar livro?"
+        description={bookToDelete ? `"${bookToDelete.title}" será removido permanentemente.` : ''}
+        confirmLabel="Apagar"
+        loading={deleting}
+        onConfirm={confirmDelete}
+        onClose={() => setBookToDelete(null)}
+      />
     </>
   )
 }

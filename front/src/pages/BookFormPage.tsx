@@ -1,11 +1,24 @@
+import Alert from '@mui/material/Alert'
+import Button from '@mui/material/Button'
+import Card from '@mui/material/Card'
+import CardContent from '@mui/material/CardContent'
+import FormControl from '@mui/material/FormControl'
+import FormHelperText from '@mui/material/FormHelperText'
+import FormLabel from '@mui/material/FormLabel'
+import MenuItem from '@mui/material/MenuItem'
+import Rating from '@mui/material/Rating'
+import Stack from '@mui/material/Stack'
+import TextField from '@mui/material/TextField'
+import Typography from '@mui/material/Typography'
 import { useEffect, useState, type FormEvent } from 'react'
-import { Link, useNavigate, useParams } from 'react-router'
+import { Link as RouterLink, useNavigate, useParams } from 'react-router'
 import { createBook, getBook, updateBook } from '../api/books'
 import { ApiError } from '../api/client'
 import { READING_STATUS_LABELS, READING_STATUSES, type Book } from '../api/types'
-import { Field } from '../components/Field'
-import { fieldA11y } from '../components/fieldA11y'
-import { hasErrors, LIMITS, toBookRequest, validateBook, type BookForm, type FieldErrors } from '../validation'
+import { EmptyState } from '../components/feedback/EmptyState'
+import { LoadingState } from '../components/feedback/LoadingState'
+import { useValidatedForm } from '../hooks/useValidatedForm'
+import { LIMITS, toBookRequest, validateBook, type BookForm } from '../validation'
 
 const EMPTY_FORM: BookForm = {
   title: '',
@@ -34,9 +47,8 @@ export function BookFormPage() {
   const isEdit = id !== undefined
   const navigate = useNavigate()
 
-  const [form, setForm] = useState<BookForm>(EMPTY_FORM)
-  const [errors, setErrors] = useState<FieldErrors<BookForm>>({})
-  const [submitted, setSubmitted] = useState(false)
+  const form = useValidatedForm(EMPTY_FORM, validateBook)
+  const { setValues } = form
   const [formError, setFormError] = useState('')
   const [loading, setLoading] = useState(isEdit)
   const [notFound, setNotFound] = useState(false)
@@ -45,37 +57,28 @@ export function BookFormPage() {
   useEffect(() => {
     if (!id) return
     getBook(id)
-      .then((book) => setForm(toForm(book)))
+      .then((book) => setValues(toForm(book)))
       .catch((e) => {
         if (e instanceof ApiError && e.status === 404) setNotFound(true)
         else setFormError('Não foi possível carregar o livro')
       })
       .finally(() => setLoading(false))
-  }, [id])
-
-  function update(field: keyof BookForm, value: string) {
-    const next = { ...form, [field]: value }
-    setForm(next)
-    if (submitted) setErrors(validateBook(next))
-  }
+  }, [id, setValues])
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault()
-    setSubmitted(true)
     setFormError('')
-    const validation = validateBook(form)
-    setErrors(validation)
-    if (hasErrors(validation)) return
+    if (!form.validateAll()) return
 
     setSubmitting(true)
     try {
-      const request = toBookRequest(form)
+      const request = toBookRequest(form.values)
       if (id) await updateBook(id, request)
       else await createBook(request)
       navigate('/books')
     } catch (e) {
       if (e instanceof ApiError) {
-        setErrors(e.fieldErrors)
+        form.setServerErrors(e.fieldErrors)
         setFormError(e.status === 404 ? 'Este livro não existe mais' : e.message)
       } else {
         setFormError('Não foi possível salvar o livro')
@@ -85,74 +88,66 @@ export function BookFormPage() {
     }
   }
 
-  if (loading) return <p className="muted">Carregando…</p>
+  if (loading) return <LoadingState />
   if (notFound) {
     return (
-      <div className="card empty">
-        <p>Livro não encontrado.</p>
-        <Link to="/books" className="button primary">Voltar para a lista</Link>
-      </div>
+      <EmptyState
+        message="Livro não encontrado."
+        action={<Button variant="contained" component={RouterLink} to="/books">Voltar para a lista</Button>}
+      />
     )
   }
 
+  const rateValue = form.values.rate === '' ? null : Number(form.values.rate)
+
   return (
-    <form className="card book-form" onSubmit={handleSubmit} noValidate>
-      <h1>{isEdit ? 'Editar livro' : 'Novo livro'}</h1>
-      {formError && <p className="notice error" role="alert">{formError}</p>}
+    <Card sx={{ maxWidth: 760, mx: 'auto' }}>
+      <CardContent sx={{ p: { xs: 2.5, sm: 4 } }}>
+        <Typography variant="h1" sx={{ mb: 3 }}>{isEdit ? 'Editar livro' : 'Novo livro'}</Typography>
 
-      <Field id="title" label="Título *" error={errors.title}>
-        <input {...fieldA11y('title', errors.title)} maxLength={LIMITS.textMax}
-          value={form.title} onChange={(e) => update('title', e.target.value)} />
-      </Field>
+        <Stack component="form" spacing={2.5} onSubmit={handleSubmit} noValidate>
+          {formError && <Alert severity="error">{formError}</Alert>}
 
-      <Field id="author" label="Autor *" error={errors.author}>
-        <input {...fieldA11y('author', errors.author)} maxLength={LIMITS.textMax}
-          value={form.author} onChange={(e) => update('author', e.target.value)} />
-      </Field>
+          <TextField label="Título" required slotProps={{ htmlInput: { maxLength: LIMITS.textMax } }}
+            {...form.bind('title')} />
+          <TextField label="Autor" required slotProps={{ htmlInput: { maxLength: LIMITS.textMax } }}
+            {...form.bind('author')} />
 
-      <div className="row">
-        <Field id="status" label="Status *" error={errors.status}>
-          <select {...fieldA11y('status', errors.status)} value={form.status}
-            onChange={(e) => update('status', e.target.value)}>
-            <option value="">Selecione…</option>
-            {READING_STATUSES.map((status) => (
-              <option key={status} value={status}>{READING_STATUS_LABELS[status]}</option>
-            ))}
-          </select>
-        </Field>
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2.5}>
+            <TextField select label="Status" required {...form.bind('status')}>
+              {READING_STATUSES.map((status) => (
+                <MenuItem key={status} value={status}>{READING_STATUS_LABELS[status]}</MenuItem>
+              ))}
+            </TextField>
+            <TextField label="Terminado em" type="date" slotProps={{ inputLabel: { shrink: true } }}
+              {...form.bind('finishedAt')} />
+          </Stack>
 
-        <Field id="rate" label="Nota" error={errors.rate}>
-          <select {...fieldA11y('rate', errors.rate)} value={form.rate}
-            onChange={(e) => update('rate', e.target.value)}>
-            <option value="">Sem nota</option>
-            {Array.from({ length: LIMITS.rateMax - LIMITS.rateMin + 1 }, (_, i) => LIMITS.rateMin + i).map((rate) => (
-              <option key={rate} value={rate}>{rate} {rate === 1 ? 'estrela' : 'estrelas'}</option>
-            ))}
-          </select>
-        </Field>
+          <FormControl error={Boolean(form.errors.rate)}>
+            <FormLabel id="rate-label">Nota</FormLabel>
+            <Rating
+              name="rate"
+              aria-labelledby="rate-label"
+              value={rateValue}
+              max={LIMITS.rateMax}
+              size="large"
+              onChange={(_, value) => form.setField('rate', value === null ? '' : String(value))}
+            />
+            <FormHelperText>
+              {form.errors.rate ?? 'Opcional. Clique na estrela marcada para remover a nota.'}
+            </FormHelperText>
+          </FormControl>
 
-        <Field id="finishedAt" label="Terminado em" error={errors.finishedAt}>
-          <input {...fieldA11y('finishedAt', errors.finishedAt)} type="date"
-            value={form.finishedAt} onChange={(e) => update('finishedAt', e.target.value)} />
-        </Field>
-      </div>
+          <TextField label="URL da capa" type="url" placeholder="https://…"
+            slotProps={{ htmlInput: { maxLength: LIMITS.textMax } }} {...form.bind('coverUrl')} />
+          <TextField label="Resumo / anotações" multiline minRows={5} {...form.bind('summary')} />
 
-      <Field id="coverUrl" label="URL da capa" error={errors.coverUrl}>
-        <input {...fieldA11y('coverUrl', errors.coverUrl)} type="url" maxLength={LIMITS.textMax}
-          placeholder="https://…" value={form.coverUrl} onChange={(e) => update('coverUrl', e.target.value)} />
-      </Field>
-
-      <Field id="summary" label="Resumo / anotações" error={errors.summary}>
-        <textarea {...fieldA11y('summary', errors.summary)} rows={6}
-          value={form.summary} onChange={(e) => update('summary', e.target.value)} />
-      </Field>
-
-      <div className="actions">
-        <Link to="/books" className="button ghost">Cancelar</Link>
-        <button type="submit" className="button primary" disabled={submitting}>
-          {submitting ? 'Salvando…' : 'Salvar'}
-        </button>
-      </div>
-    </form>
+          <Stack direction="row" spacing={1} sx={{ justifyContent: 'flex-end' }}>
+            <Button component={RouterLink} to="/books" disabled={submitting}>Cancelar</Button>
+            <Button type="submit" variant="contained" loading={submitting}>Salvar</Button>
+          </Stack>
+        </Stack>
+      </CardContent>
+    </Card>
   )
 }

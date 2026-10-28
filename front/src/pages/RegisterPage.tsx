@@ -1,43 +1,38 @@
+import Alert from '@mui/material/Alert'
+import Button from '@mui/material/Button'
+import Link from '@mui/material/Link'
+import Stack from '@mui/material/Stack'
+import TextField from '@mui/material/TextField'
+import Typography from '@mui/material/Typography'
 import { useState, type FormEvent } from 'react'
-import { Link, useNavigate } from 'react-router'
+import { Link as RouterLink, useNavigate } from 'react-router'
 import { register } from '../api/auth'
 import { ApiError } from '../api/client'
-import { Field } from '../components/Field'
-import { fieldA11y } from '../components/fieldA11y'
-import { hasErrors, LIMITS, validateRegister, type FieldErrors, type RegisterForm } from '../validation'
+import { AuthLayout } from '../components/layout/AuthLayout'
+import { useValidatedForm } from '../hooks/useValidatedForm'
+import { LIMITS, validateRegister } from '../validation'
 
 export function RegisterPage() {
   const navigate = useNavigate()
 
-  const [form, setForm] = useState<RegisterForm>({ email: '', password: '', confirmPassword: '' })
-  const [errors, setErrors] = useState<FieldErrors<RegisterForm>>({})
-  const [submitted, setSubmitted] = useState(false)
+  const form = useValidatedForm({ email: '', password: '', confirmPassword: '' }, validateRegister)
   const [formError, setFormError] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
-  function update(field: keyof RegisterForm, value: string) {
-    const next = { ...form, [field]: value }
-    setForm(next)
-    if (submitted) setErrors(validateRegister(next))
-  }
-
   async function handleSubmit(event: FormEvent) {
     event.preventDefault()
-    setSubmitted(true)
     setFormError('')
-    const validation = validateRegister(form)
-    setErrors(validation)
-    if (hasErrors(validation)) return
+    if (!form.validateAll()) return
 
     setSubmitting(true)
     try {
-      await register({ email: form.email.trim(), password: form.password })
+      await register({ email: form.values.email.trim(), password: form.values.password })
       navigate('/login', { replace: true, state: { registered: true } })
     } catch (error) {
       if (error instanceof ApiError) {
-        if (error.status === 409) setErrors({ email: error.message })
+        if (error.status === 409) form.setServerErrors({ email: error.message })
         else {
-          setErrors(error.fieldErrors)
+          form.setServerErrors(error.fieldErrors)
           setFormError(error.message)
         }
       } else {
@@ -49,33 +44,23 @@ export function RegisterPage() {
   }
 
   return (
-    <div className="auth-page">
-      <form className="card auth-card" onSubmit={handleSubmit} noValidate>
-        <h1>Criar conta</h1>
-        {formError && <p className="notice error" role="alert">{formError}</p>}
+    <AuthLayout title="Criar conta">
+      <Stack component="form" spacing={2.5} onSubmit={handleSubmit} noValidate>
+        {formError && <Alert severity="error">{formError}</Alert>}
 
-        <Field id="email" label="E-mail" error={errors.email}>
-          <input {...fieldA11y('email', errors.email)} type="email" autoComplete="email"
-            maxLength={LIMITS.textMax} value={form.email} onChange={(e) => update('email', e.target.value)} />
-        </Field>
+        <TextField label="E-mail" type="email" autoComplete="email" autoFocus
+          slotProps={{ htmlInput: { maxLength: LIMITS.textMax } }} {...form.bind('email')} />
+        <TextField label="Senha" type="password" autoComplete="new-password"
+          slotProps={{ htmlInput: { maxLength: LIMITS.passwordMax } }}
+          {...form.bind('password', `Entre ${LIMITS.passwordMin} e ${LIMITS.passwordMax} caracteres`)} />
+        <TextField label="Confirme a senha" type="password" autoComplete="new-password"
+          slotProps={{ htmlInput: { maxLength: LIMITS.passwordMax } }} {...form.bind('confirmPassword')} />
 
-        <Field id="password" label="Senha" error={errors.password}
-          hint={`Entre ${LIMITS.passwordMin} e ${LIMITS.passwordMax} caracteres`}>
-          <input {...fieldA11y('password', errors.password)} type="password" autoComplete="new-password"
-            maxLength={LIMITS.passwordMax} value={form.password} onChange={(e) => update('password', e.target.value)} />
-        </Field>
-
-        <Field id="confirmPassword" label="Confirme a senha" error={errors.confirmPassword}>
-          <input {...fieldA11y('confirmPassword', errors.confirmPassword)} type="password" autoComplete="new-password"
-            maxLength={LIMITS.passwordMax} value={form.confirmPassword}
-            onChange={(e) => update('confirmPassword', e.target.value)} />
-        </Field>
-
-        <button type="submit" className="button primary" disabled={submitting}>
-          {submitting ? 'Criando…' : 'Criar conta'}
-        </button>
-        <p className="muted center">Já tem conta? <Link to="/login">Entrar</Link></p>
-      </form>
-    </div>
+        <Button type="submit" variant="contained" size="large" loading={submitting}>Criar conta</Button>
+        <Typography variant="body2" color="text.secondary" align="center">
+          Já tem conta? <Link component={RouterLink} to="/login">Entrar</Link>
+        </Typography>
+      </Stack>
+    </AuthLayout>
   )
 }
