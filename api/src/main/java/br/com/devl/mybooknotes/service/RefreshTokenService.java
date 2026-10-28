@@ -68,6 +68,13 @@ public class RefreshTokenService {
             .ifPresent(token -> repository.revokeFamily(token.getFamilyId(), Instant.now()));
     }
 
+    // Só apaga tokens expirados. Revogados ainda válidos ficam: são eles que permitem
+    // detectar o reuso de um token roubado e revogar a família.
+    @Transactional
+    public int deleteExpired() {
+        return repository.deleteExpired(Instant.now());
+    }
+
     private RefreshToken find(String rawToken) {
         if (rawToken == null || rawToken.isBlank()) throw invalidToken();
         return repository.findByTokenHash(hash(rawToken)).orElseThrow(this::invalidToken);
