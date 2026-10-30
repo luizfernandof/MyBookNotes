@@ -26,9 +26,11 @@ de login/cadastro) alterna entre Claro, Escuro e Sistema; a escolha fica salva n
 ## Rodando
 
 ```bash
-# terminal 1 — API (porta 8080)
+# terminal 1 — banco e API (porta 8080)
+docker compose -f ../docker-compose.dev.yml up -d
 cd ../api
 export JWT_SECRET=$(openssl rand -base64 48)
+export DB_PASSWORD=mybooknotes
 ./mvnw spring-boot:run
 
 # terminal 2 — front (porta 5173)

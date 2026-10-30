@@ -1,0 +1,88 @@
+# VM de apontamento -> front (nginx) -> api -> db
+# A API e o banco ficam numa rede interna, sem nenhuma porta publicada.
+services:
+  db:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: mybooknotes
+      POSTGRES_USER: mybooknotes
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?defina DB_PASSWORD no arquivo .env}
+    volumes:
+      - db-data:/var/lib/postgresql
+    networks:
+      - backend
+    mem_limit: 512m
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "mybooknotes", "-d", "mybooknotes"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 20s
+
+  api:
+    build: ./api
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_URL: jdbc:postgresql://db:5432/mybooknotes
+      DB_USERNAME: mybooknotes
+      DB_PASSWORD: ${DB_PASSWORD:?defina DB_PASSWORD no arquivo .env}
+      JWT_SECRET: ${JWT_SECRET:?defina JWT_SECRET no arquivo .env}
+      TZ: ${TZ:-America/Sao_Paulo}
+      JAVA_TOOL_OPTIONS: -XX:MaxRAMPercentage=75
+    networks:
+      - backend
+    mem_limit: 768m
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "bash", "-c", "</dev/tcp/127.0.0.1/8080"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 60s
+
+  front:
+    build: ./front
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      # Porta que a VM de apontamento acessa
+      - "${FRONT_PORT:-8080}:8080"
+    networks:
+      - backend
+      - edge
+    mem_limit: 128m
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:8080/"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  db-data:
+
+networks:
+  # internal: a API e o banco não têm saída para a internet
+  backend:
+    internal: true
+  edge:
