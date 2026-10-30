@@ -9,14 +9,17 @@ import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.transaction.annotation.Transactional;
 
+import br.com.devl.mybooknotes.TestcontainersConfig;
 import br.com.devl.mybooknotes.model.RefreshToken;
 import br.com.devl.mybooknotes.model.User;
 import br.com.devl.mybooknotes.repository.RefreshTokenRepository;
 import br.com.devl.mybooknotes.repository.UserRepository;
 
 @SpringBootTest
+@Import(TestcontainersConfig.class)
 @Transactional
 class RefreshTokenCleanupTest {
 

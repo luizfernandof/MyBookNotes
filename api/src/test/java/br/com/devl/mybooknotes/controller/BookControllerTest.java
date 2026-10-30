@@ -75,6 +75,19 @@ class BookControllerTest {
     }
 
     @Test
+    void listBooksReturns400ForUnknownSortField() throws Exception {
+        mockMvc.perform(get("/api/books").param("sort", "xyz").with(user()))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.detail").value("Não é possível ordenar por: xyz"));
+    }
+
+    @Test
+    void listBooksReturns400WhenSortingByOwnerData() throws Exception {
+        mockMvc.perform(get("/api/books").param("sort", "owner.passwordHash").with(user()))
+            .andExpect(status().isBadRequest());
+    }
+
+    @Test
     void findBookByIdReturns404WhenMissing() throws Exception {
         var id = UUID.randomUUID();
         when(service.findBookById(USER_ID, id)).thenThrow(new EntityNotFoundException("Livro não encontrado!..."));
@@ -105,6 +118,19 @@ class BookControllerTest {
             .andExpect(jsonPath("$.errors.title").exists())
             .andExpect(jsonPath("$.errors.rate").exists())
             .andExpect(jsonPath("$.errors.status").exists());
+    }
+
+    @Test
+    void createBookReturns400WhenTextContainsNullCharacter() throws Exception {
+        var body = """
+            {"title": "a\\u0000b", "author": "Autor", "summary": "c\\u0000d", "coverUrl": "e\\u0000f", "status": "READ"}
+            """;
+
+        mockMvc.perform(post("/api/books").with(user()).contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.errors.title").exists())
+            .andExpect(jsonPath("$.errors.summary").exists())
+            .andExpect(jsonPath("$.errors.coverUrl").exists());
     }
 
     @Test

@@ -38,11 +38,10 @@ public class SecurityConfig {
             // num cookie SameSite=Strict restrito a /api/auth, então não há sessão para proteger com CSRF
             .csrf(csrf -> csrf.disable())
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(HttpMethod.POST, "/api/auth/register", "/api/auth/login",
                         "/api/auth/refresh", "/api/auth/logout").permitAll()
-                .requestMatchers("/h2-console/**", "/error").permitAll()
+                .requestMatchers("/error").permitAll()
                 .anyRequest().authenticated())
             .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()));
         return http.build();

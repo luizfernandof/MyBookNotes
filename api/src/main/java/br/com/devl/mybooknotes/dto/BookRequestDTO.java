@@ -11,12 +11,12 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 public record BookRequestDTO(
-        @NotBlank @Size(max = 255) String title,
-        @NotBlank @Size(max = 255) String author,
+        @NotBlank @Size(max = 255) @NoNullCharacter String title,
+        @NotBlank @Size(max = 255) @NoNullCharacter String author,
         @Min(0) @Max(5) Integer rate,
-        String summary,
+        @NoNullCharacter String summary,
         LocalDate finishedAt,
-        @Size(max = 255) String coverUrl,
+        @Size(max = 255) @NoNullCharacter String coverUrl,
         @NotNull ReadingStatus status)
 {
     public Book toEntity() {

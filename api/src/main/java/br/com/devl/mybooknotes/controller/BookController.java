@@ -1,5 +1,6 @@
 package br.com.devl.mybooknotes.controller;
 
+import java.util.Set;
 import java.util.UUID;
 
 import org.springframework.data.domain.Pageable;
@@ -21,6 +22,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import br.com.devl.mybooknotes.dto.BookRequestDTO;
 import br.com.devl.mybooknotes.dto.BookResponseDTO;
+import br.com.devl.mybooknotes.exception.InvalidSortException;
 import br.com.devl.mybooknotes.service.BookService;
 import jakarta.validation.Valid;
 
@@ -28,6 +30,9 @@ import jakarta.validation.Valid;
 @RestController
 @RequestMapping("/api/books")
 public class BookController {
+
+    private static final Set<String> SORTABLE_FIELDS =
+        Set.of("title", "author", "rate", "status", "createdAt", "finishedAt");
 
     private final BookService service;
 
@@ -38,6 +43,7 @@ public class BookController {
     @GetMapping()
     public ResponseEntity<PagedModel<BookResponseDTO>> listBooks(@AuthenticationPrincipal Jwt jwt,
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        validateSort(pageable.getSort());
         var books = service.listBooks(userId(jwt), pageable);
         return ResponseEntity.ok(new PagedModel<>(books));
     }
@@ -67,6 +73,15 @@ public class BookController {
     public ResponseEntity<Void> deleteBookById(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id) {
         service.deleteBookById(userId(jwt), id);
         return ResponseEntity.noContent().build();
+    }
+
+    // Sem esta lista, um campo inexistente causaria erro 500 e seria possível ordenar por dados do dono
+    private static void validateSort(Sort sort) {
+        for (var order : sort) {
+            if (!SORTABLE_FIELDS.contains(order.getProperty())) {
+                throw new InvalidSortException(order.getProperty());
+            }
+        }
     }
 
     // O dono vem sempre do token (claim "sub"), nunca do corpo da requisição

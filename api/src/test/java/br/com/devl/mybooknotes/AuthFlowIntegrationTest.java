@@ -10,11 +10,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.util.List;
 import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -27,6 +29,7 @@ import br.com.devl.mybooknotes.controller.AuthController;
 import jakarta.servlet.http.Cookie;
 
 @SpringBootTest
+@Import(TestcontainersConfig.class)
 @AutoConfigureMockMvc
 class AuthFlowIntegrationTest {
 
@@ -117,6 +120,14 @@ class AuthFlowIntegrationTest {
     }
 
     @Test
+    void loginRejectsNullCharacterInEmail() throws Exception {
+        mockMvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"email\": \"a\\u0000@example.com\", \"password\": \"%s\"}".formatted(PASSWORD)))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.errors.email").exists());
+    }
+
+    @Test
     void loginSetsSecureRefreshCookie() throws Exception {
         var email = newEmail();
         register(email);
@@ -154,6 +165,19 @@ class AuthFlowIntegrationTest {
 
         mockMvc.perform(get("/api/books/{id}", aliceBookId).header(HttpHeaders.AUTHORIZATION, "Bearer " + alice.accessToken()))
             .andExpect(status().isOk());
+    }
+
+    @Test
+    void allSortableFieldsWorkOnTheDatabase() throws Exception {
+        var session = registerAndLogin();
+        createBook(session.accessToken());
+
+        for (var sort : List.of("title", "author,desc", "rate", "status", "createdAt,desc", "finishedAt")) {
+            mockMvc.perform(get("/api/books").param("sort", sort)
+                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + session.accessToken()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.page.totalElements").value(1));
+        }
     }
 
     @Test
