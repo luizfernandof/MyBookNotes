@@ -1,5 +1,6 @@
 import DeleteOutlined from '@mui/icons-material/DeleteOutlined'
 import EditOutlined from '@mui/icons-material/EditOutlined'
+import VisibilityOutlined from '@mui/icons-material/VisibilityOutlined'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Card from '@mui/material/Card'
@@ -54,6 +55,9 @@ export function BookCard({ book, onDelete }: { book: Book; onDelete: (book: Book
         </Stack>
       </Stack>
       <CardActions sx={{ justifyContent: 'flex-end', borderTop: 1, borderColor: 'divider' }}>
+        <Button size="small" startIcon={<VisibilityOutlined />} component={RouterLink} to={`/books/${book.id}`}>
+          Ver
+        </Button>
         <Button size="small" startIcon={<EditOutlined />} component={RouterLink} to={`/books/${book.id}/edit`}>
           Editar
         </Button>

@@ -2,6 +2,7 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router'
 import { AuthProvider } from './auth/AuthProvider'
 import { AppLayout } from './components/layout/AppLayout'
 import { RequireAuth, RequireGuest } from './components/RouteGuards'
+import { BookDetailPage } from './pages/BookDetailPage'
 import { BookFormPage } from './pages/BookFormPage'
 import { BooksPage } from './pages/BooksPage'
 import { LoginPage } from './pages/LoginPage'
@@ -23,6 +24,7 @@ export default function App() {
               <Route element={<AppLayout />}>
                 <Route path="/books" element={<BooksPage />} />
                 <Route path="/books/new" element={<BookFormPage />} />
+                <Route path="/books/:id" element={<BookDetailPage />} />
                 <Route path="/books/:id/edit" element={<BookFormPage />} />
                 <Route path="/metrics" element={<MetricsPage />} />
               </Route>

@@ -1,10 +1,13 @@
 import Box from '@mui/material/Box'
 import { useState } from 'react'
 
-const SIZE = { width: 88, height: 130 }
+const SIZES = {
+  small: { width: 88, height: 130 },
+  large: { width: 160, height: 236 },
+}
 
 // Mostra a capa ou, se não houver URL (ou a imagem falhar), a inicial do título
-export function BookCover({ title, coverUrl }: { title: string; coverUrl: string | null }) {
+export function BookCover({ title, coverUrl, size = 'small' }: { title: string; coverUrl: string | null; size?: keyof typeof SIZES }) {
   const [failedUrl, setFailedUrl] = useState<string | null>(null)
 
   if (coverUrl && coverUrl !== failedUrl) {
@@ -15,7 +18,7 @@ export function BookCover({ title, coverUrl }: { title: string; coverUrl: string
         alt=""
         loading="lazy"
         onError={() => setFailedUrl(coverUrl)}
-        sx={{ ...SIZE, flexShrink: 0, objectFit: 'cover', borderRadius: 1.5, bgcolor: 'divider' }}
+        sx={{ ...SIZES[size], flexShrink: 0, objectFit: 'cover', borderRadius: 1.5, bgcolor: 'divider' }}
       />
     )
   }
@@ -24,7 +27,7 @@ export function BookCover({ title, coverUrl }: { title: string; coverUrl: string
     <Box
       aria-hidden="true"
       sx={{
-        ...SIZE,
+        ...SIZES[size],
         flexShrink: 0,
         display: 'grid',
         placeItems: 'center',
