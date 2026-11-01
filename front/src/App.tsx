@@ -5,6 +5,7 @@ import { RequireAuth, RequireGuest } from './components/RouteGuards'
 import { BookFormPage } from './pages/BookFormPage'
 import { BooksPage } from './pages/BooksPage'
 import { LoginPage } from './pages/LoginPage'
+import { MetricsPage } from './pages/MetricsPage'
 import { RegisterPage } from './pages/RegisterPage'
 import { AppThemeProvider } from './theme/AppThemeProvider'
 
@@ -23,6 +24,7 @@ export default function App() {
                 <Route path="/books" element={<BooksPage />} />
                 <Route path="/books/new" element={<BookFormPage />} />
                 <Route path="/books/:id/edit" element={<BookFormPage />} />
+                <Route path="/metrics" element={<MetricsPage />} />
               </Route>
             </Route>
             <Route path="*" element={<Navigate to="/books" replace />} />

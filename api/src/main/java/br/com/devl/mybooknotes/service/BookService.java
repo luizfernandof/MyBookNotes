@@ -6,10 +6,12 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
+import br.com.devl.mybooknotes.dto.BookFilter;
 import br.com.devl.mybooknotes.dto.BookRequestDTO;
 import br.com.devl.mybooknotes.dto.BookResponseDTO;
 import br.com.devl.mybooknotes.model.Book;
 import br.com.devl.mybooknotes.repository.BookRepository;
+import br.com.devl.mybooknotes.repository.BookSpecifications;
 import br.com.devl.mybooknotes.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
 
@@ -29,8 +31,8 @@ public class BookService {
         return BookResponseDTO.fromEntity(findOrThrow(userId, id));
     }
 
-    public Page<BookResponseDTO> listBooks(UUID userId, Pageable pageable) {
-        return repository.findAllByOwnerId(userId, pageable).map(BookResponseDTO::fromEntity);
+    public Page<BookResponseDTO> listBooks(UUID userId, BookFilter filter, Pageable pageable) {
+        return repository.findAll(BookSpecifications.ownedByAndMatching(userId, filter), pageable).map(BookResponseDTO::fromEntity);
     }
 
     public BookResponseDTO createBook(UUID userId, BookRequestDTO request) {
