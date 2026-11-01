@@ -1,9 +1,10 @@
+import InsightsOutlined from '@mui/icons-material/InsightsOutlined'
 import LogoutOutlined from '@mui/icons-material/LogoutOutlined'
 import AppBar from '@mui/material/AppBar'
 import Button from '@mui/material/Button'
 import Container from '@mui/material/Container'
 import Toolbar from '@mui/material/Toolbar'
-import { Outlet, useNavigate } from 'react-router'
+import { Link as RouterLink, Outlet, useNavigate } from 'react-router'
 import { useAuth } from '../../auth/context'
 import { ThemeToggle } from '../../theme/ThemeToggle'
 import { Brand } from './Brand'
@@ -21,7 +22,10 @@ export function AppLayout() {
     <>
       <AppBar position="sticky" color="inherit" elevation={0} sx={{ borderBottom: 1, borderColor: 'divider' }}>
         <Toolbar sx={{ gap: 1 }}>
-          <Brand to="/books" />
+          <Brand to="/books" compact />
+          <Button color="inherit" startIcon={<InsightsOutlined />} component={RouterLink} to="/metrics">
+            Métricas
+          </Button>
           <ThemeToggle />
           <Button color="inherit" startIcon={<LogoutOutlined />} onClick={handleLogout}>
             Sair

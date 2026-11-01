@@ -18,13 +18,20 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import br.com.devl.mybooknotes.dto.BookFilter;
 import br.com.devl.mybooknotes.dto.BookRequestDTO;
 import br.com.devl.mybooknotes.dto.BookResponseDTO;
+import br.com.devl.mybooknotes.dto.NoNullCharacter;
+import br.com.devl.mybooknotes.enums.ReadingStatus;
 import br.com.devl.mybooknotes.exception.InvalidSortException;
 import br.com.devl.mybooknotes.service.BookService;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Size;
 
 
 @RestController
@@ -42,9 +49,12 @@ public class BookController {
 
     @GetMapping()
     public ResponseEntity<PagedModel<BookResponseDTO>> listBooks(@AuthenticationPrincipal Jwt jwt,
+            @RequestParam(required = false) @Size(max = 255) @NoNullCharacter String q,
+            @RequestParam(required = false) ReadingStatus status,
+            @RequestParam(required = false) @Min(0) @Max(5) Integer minRate,
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
         validateSort(pageable.getSort());
-        var books = service.listBooks(userId(jwt), pageable);
+        var books = service.listBooks(userId(jwt), new BookFilter(q, status, minRate), pageable);
         return ResponseEntity.ok(new PagedModel<>(books));
     }
 

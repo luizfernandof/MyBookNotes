@@ -3,6 +3,7 @@ package br.com.devl.mybooknotes.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -14,12 +15,15 @@ import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.ArgumentMatchers;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.jpa.domain.Specification;
 
+import br.com.devl.mybooknotes.dto.BookFilter;
 import br.com.devl.mybooknotes.dto.BookRequestDTO;
 import br.com.devl.mybooknotes.enums.ReadingStatus;
 import br.com.devl.mybooknotes.model.Book;
@@ -74,10 +78,10 @@ class BookServiceTest {
     @Test
     void listBooksMapsPage() {
         var pageable = PageRequest.of(0, 10);
-        when(repository.findAllByOwnerId(USER_ID, pageable))
+        when(repository.findAll(ArgumentMatchers.<Specification<Book>>any(), eq(pageable)))
             .thenReturn(new PageImpl<>(List.of(book(UUID.randomUUID())), pageable, 1));
 
-        var result = service.listBooks(USER_ID, pageable);
+        var result = service.listBooks(USER_ID, new BookFilter(null, null, null), pageable);
 
         assertThat(result.getTotalElements()).isEqualTo(1);
         assertThat(result.getContent().get(0).author()).isEqualTo("Machado de Assis");
@@ -117,7 +121,7 @@ class BookServiceTest {
         when(repository.findByIdAndOwnerId(id, USER_ID)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.deleteBookById(USER_ID, id)).isInstanceOf(EntityNotFoundException.class);
-        verify(repository, never()).delete(any());
+        verify(repository, never()).delete(any(Book.class));
     }
 
 }

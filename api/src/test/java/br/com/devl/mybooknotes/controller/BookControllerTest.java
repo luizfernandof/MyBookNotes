@@ -27,6 +27,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import br.com.devl.mybooknotes.config.SecurityConfig;
+import br.com.devl.mybooknotes.dto.BookFilter;
 import br.com.devl.mybooknotes.dto.BookRequestDTO;
 import br.com.devl.mybooknotes.dto.BookResponseDTO;
 import br.com.devl.mybooknotes.enums.ReadingStatus;
@@ -65,7 +66,7 @@ class BookControllerTest {
 
     @Test
     void listBooksReturnsPage() throws Exception {
-        when(service.listBooks(eq(USER_ID), any(Pageable.class)))
+        when(service.listBooks(eq(USER_ID), any(BookFilter.class), any(Pageable.class)))
             .thenReturn(new PageImpl<>(List.of(response(UUID.randomUUID()))));
 
         mockMvc.perform(get("/api/books").with(user()))
@@ -85,6 +86,13 @@ class BookControllerTest {
     void listBooksReturns400WhenSortingByOwnerData() throws Exception {
         mockMvc.perform(get("/api/books").param("sort", "owner.passwordHash").with(user()))
             .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void listBooksReturns400ForInvalidFilters() throws Exception {
+        mockMvc.perform(get("/api/books").param("status", "XYZ").with(user())).andExpect(status().isBadRequest());
+        mockMvc.perform(get("/api/books").param("minRate", "6").with(user())).andExpect(status().isBadRequest());
+        mockMvc.perform(get("/api/books").param("q", "a\u0000b").with(user())).andExpect(status().isBadRequest());
     }
 
     @Test

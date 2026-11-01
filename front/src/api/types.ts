@@ -42,6 +42,20 @@ export interface Page<T> {
   }
 }
 
+export interface Metrics {
+  year: number
+  totalBooks: number
+  booksByStatus: Record<ReadingStatus, number>
+  averageRate: number | null
+  rateDistribution: { rate: number; count: number }[]
+  readByYear: { year: number; count: number }[]
+  readByMonth: number[]
+  readInYear: number
+  goalTarget: number | null
+  readWithoutDate: number
+  topAuthors: { author: string; count: number }[]
+}
+
 export interface RegisterRequest {
   email: string
   password: string
